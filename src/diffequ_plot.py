@@ -88,7 +88,7 @@ def plot_system(params, s0, tg_arr):
             diffeqs.append(d)
         return diffeqs
 
-    t = np.arange(0,1000,1)
+    t = np.arange(0,1000,0.1)
 
     s = odeint(f,s0,t)
     print(t)
