@@ -1,4 +1,5 @@
 import json
+import ast
 import numpy as np
 import pandas as pd
 
@@ -23,7 +24,7 @@ import pandas as pd
 #     ...
 # } 
 
-def create_network_json(prokode_dir, gene_arr, decay_loc, tfbs_loc):
+def create_network_json(prokode_dir, gene_arr, decay_loc, tfbs_loc, annotation_df):
     # file df dependencies: 
     decay_df = pd.read_csv(decay_loc) # names=['gene', 'decay_rate']
     tfbs_df = pd.read_csv(tfbs_loc).reset_index() # names=[,'tf','tg','kd', 'beta]
@@ -37,24 +38,61 @@ def create_network_json(prokode_dir, gene_arr, decay_loc, tfbs_loc):
         tgdecay = decay_df.loc[decay_df['gene']==tg, 'decay_rate']
 
         # within each gene's brackets:
-        print(tgdecay.to_list())
-        arr = {"tg_decay":tgdecay.to_list()[0]}
+        syn = annotation_df.loc[annotation_df['geneid']==tg,'synonyms'].values[0]
+        arr = {"tg_decay":tgdecay.to_list()[0], "synonyms":ast.literal_eval(syn)}
         reg_arr = {}
         # within each gene's "regulators": array
         for _, tf_row in tfbs_df[tfbs_df['tg']==tg].iterrows():
             tf_row['tf'] = "polymerase" if tf_row['tf'] == "rpoD" else tf_row['tf']
             # beta = tf_row['beta']
-            kdtf = tf_row['Kd']
+            kdtf = tf_row['kd']
             reg_arr[tf_row['tf']] = {"beta":"nan","kd_tf":kdtf}
         arr["regulators"] = reg_arr
         
         output[tg] = arr
 
     # write to network.json
+    print('\t\twriting to network.json')
     network_loc = prokode_dir + '/src/network.json'
-    json.dump(output, open(network_loc, 'w'), indent=4)
+    json.dump(output, open(network_loc, 'w'), indent=5)
 
     return network_loc
+
+# def create_network_json(prokode_dir, gene_arr, decay_loc, tfbs_loc, annotation_df):
+#     # read file dependencies: 
+#     decay_df = pd.read_csv(decay_loc) # names=['gene', 'decay_rate']
+    
+#     # read tfbs.csv and append to network.json
+#     print('\t\twriting to network.json')
+#     network_loc = prokode_dir + '/src/network.json'
+#     with open(tfbs_loc, 'r') as tfbs_file: # names=[,'tf','tg','kd', 'beta]
+#         with open(network_loc, 'a') as network_file:
+#             # json start bracket
+#             network_file.write('{\n')
+
+#             # loop over every gene
+#             for tg in gene_arr:
+#                 # query decay rates file
+#                 tgdecay = decay_df.loc[decay_df['gene']==tg, 'decay_rate']
+
+#                 # within each gene's brackets:
+#                 syn = annotation_df.loc[annotation_df['geneid']==tg,'synonyms'].values[0]
+#                 arr = {"tg":tg, "synonyms":ast.literal_eval(syn), "tg_decay":tgdecay.to_list()[0]}
+#                 reg_arr = {}
+#                 # within each gene's "regulators": array
+#                 for _, tf_row in tfbs_df[tfbs_df['tg']==tg].iterrows():
+#                     tf_row['tf'] = "polymerase" if tf_row['tf'] == "rpoD" else tf_row['tf']
+#                     # beta = tf_row['beta']
+#                     kdtf = tf_row['Kd']
+#                     reg_arr[tf_row['tf']] = {"beta":"nan","kd_tf":kdtf}
+#                 arr["regulators"] = reg_arr
+                
+#                 network_file.write(f'{json.loads(arr)},\n')
+            
+#             # json end brackets
+#             network_file.write('}')
+
+#     return network_loc
 
 # def config_basal(Nns):
 #     Np = 6000
@@ -66,11 +104,11 @@ def network_main(prokode_dir, annotation_loc, tfbs_loc, decay_rates_loc):
     # basal_loc =
 
     # create gene_arr needed for create_network_json()
-    annotation_df = pd.read_csv(annotation_loc)
+    annotation_df = pd.read_csv(annotation_loc, delimiter='\t')
     gene_arr = list(set(annotation_df['geneid'].to_list()))
 
     # create network.json
-    network_loc = create_network_json(prokode_dir, gene_arr, decay_rates_loc, tfbs_loc)
+    network_loc = create_network_json(prokode_dir, gene_arr, decay_rates_loc, tfbs_loc, annotation_df)
 
     return network_loc
 
