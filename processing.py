@@ -6,7 +6,7 @@ from src.run import create_network_json_main
 import cvxpy 
 
 # paramters
-reset = True
+reset = False
 prokode_dir = '/workspaces/git'
 data_file = 'GSE90743_E14R025_raw_counts.txt'
 genome_loc = '/workspaces/git/src/inputs/genome.fasta'
