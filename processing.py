@@ -52,9 +52,9 @@ def compare(beta_collection, tf_key):
 
         count, running_mean_std_dev = update_mean(count, running_mean_std_dev, std_dev)
 
-        compare_json.append({"tf":tf,"mean":mean,"median":median_r,"range":range_r,"standard deviation":std_dev})
+        compare_json.append({"tf":tf,"mean":mean,"median":median_r,"range":range_r,"log standard deviation":np.log(std_dev)})
     
-    compare_json.append({"tf":"all","mean standard deviation":running_mean_std_dev})
+    compare_json.append({"tf":"all","mean standard deviation":running_mean_std_dev,"mean log standard deviation":np.log(running_mean_std_dev)})
     
     json.dump(compare_json, open('results.json', 'w'), indent=3)
 

@@ -26,7 +26,7 @@ def config_tfmotifs(prokode_dir, pfm_database_loc, annotation_loc):
 def score_to_kd(score):
     return np.exp(-1 * score)
 
-def write_to_tfbs(line, add_betas):
+def get_tfbs_rowarr(line, add_betas):
     # line headers: ['tg','_','tf','tf_matrixid','start','end','strand','prescore','score','seq']
     tfbs_row = [line[2], line[0]]
     kd = score_to_kd(float(line[8]))
@@ -44,19 +44,19 @@ def create_tfbs_through_CiiiDER(prokode_dir, jar_loc, promoters_loc, matrices_lo
     # CiiiDER (https://ciiider.erc.monash.edu/) is a software that searches the promoter DNA regions of each gene with the binding motifs of each transcription factor to determine their binding sites. 
     c_output_loc = prokode_dir + '/src/preprocessing/CiiiDER_results.txt'
     
-    # config config.ini
-    config_o = f"""[General]
-STARTPOINT = 1
-ENDPOINT = 1\n
-[Scan]
-GENELISTFILENAME = {promoters_loc}
-MATRIXFILE = {matrices_loc}
-GENESCANRESULTS = {c_output_loc}
-DEFICIT = {deficit_val}"""
+#     # config config.ini
+#     config_o = f"""[General]
+# STARTPOINT = 1
+# ENDPOINT = 1\n
+# [Scan]
+# GENELISTFILENAME = {promoters_loc}
+# MATRIXFILE = {matrices_loc}
+# GENESCANRESULTS = {c_output_loc}
+# DEFICIT = {deficit_val}"""
     
-    open(prokode_dir + '/src/preprocessing/config.ini', 'w').write(config_o)
+#     open(prokode_dir + '/src/preprocessing/config.ini', 'w').write(config_o)
 
-    subprocess.run(['java','-jar', jar_loc, '-n', prokode_dir + '/src/preprocessing/config.ini'])
+#     subprocess.run(['java','-jar', jar_loc, '-n', prokode_dir + '/src/preprocessing/config.ini'])
 
     c_output_loc = c_output_loc[:-3] + 'csv'
 
@@ -73,29 +73,31 @@ DEFICIT = {deficit_val}"""
         with open(c_output_loc, "r") as csvfile:
             prev = ''
             prev_fullline = ''
-            prev_act = False
+            prev_activated = False
             for row in csvfile:
                 if len(row)<12:
                     row = row.replace("\n", '')
                     prev = row
-                    prev_act = True
+                    prev_activated = True
                 else:
-                    if prev_act:
+                    if prev_activated:
                         line = prev + row
                     else:
                         line = row
                     
-                    line = line.split(',')
-                    a = line[1]
-                    b = prev_fullline[1] if type(prev_fullline)==list else ''
+                    line_arr = line.split(',')
+                    a = line_arr[3]
+                    b = prev_fullline[3] if type(prev_fullline)==list else ''
 
                     if a == b:
+                        prev_fullline = line_arr
                         continue
                     else: 
-                        tfbs_row = write_to_tfbs(line, add_betas)
+                        tfbs_row = get_tfbs_rowarr(line_arr, add_betas)
                         writer_object.writerow(tfbs_row)
 
-                        prev_fullline = line
+                        prev_fullline = line_arr
+                        continue
                 
         return tfbs_loc
 

@@ -9,11 +9,10 @@ def create_network_json_main(prokode_dir, genome_loc, annotation_loc, pfm_databa
         # reset file structure
         os.remove('./results.json')
         os.remove('./run.log')
-        os.remove('./__pycache__/run.cpython-312.pyc')
-        os.rmdir('./__pycache__')
         os.remove('./src/decay_rates.csv')
         os.remove('./src/tfbs.csv')
         os.remove('./src/__pycache__/config_network_structure.cpython-312.pyc')
+        os.remove('./src/__pycache__/run.cpython-312.pyc')
         os.rmdir('./src/__pycache__')
         os.remove('./src/preprocessing/CiiiDER_results.bsl')
         os.remove('./src/preprocessing/CiiiDER_results.csv')
