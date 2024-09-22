@@ -2,7 +2,7 @@ import re
 import pandas as pd
 
 with open('genomic.gbff','r') as file:
-    out = 'geneid\tstart\tsynonyms\n'
+    out = 'geneid\tstart\tend\tsynonyms\n'
     get_synonym = False
     spec = False
     prev_lin = 0
@@ -25,13 +25,15 @@ with open('genomic.gbff','r') as file:
         search = re.search('/gene=".+"', line)
         if search != None:
             geneid = search.group()[7:-1]
-            start = re.search('\s(complement\()?\d+\.\.', prev_lin)
+            start = re.search('\s(complement\()?\d+\.\.\d+', prev_lin)
             if start == None:
                 continue
-            start = start.group()[12:-2] if start.group().find('nt(') >= 0 else start.group()[1:-2]
+            start = start.group()
+            end = start[start.find('..')+2:]
+            start = start[12:start.find('..')] if start.find('nt(') >= 0 else start[1:start.find('..')]
             geneid = geneid[:geneid.find('_' or '1' or '-')] if re.search('\d', geneid) != None else geneid
             prev_lin = line
-            out += f'{geneid}\t{start}\t'
+            out += f'{geneid}\t{start}\t{end}\t'
             get_synonym = True
             continue
         else:

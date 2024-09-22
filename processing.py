@@ -6,14 +6,14 @@ from src.run import create_network_json_main
 import cvxpy 
 
 # paramters
-reset = False
+reset = True
 prokode_dir = '/workspaces/git'
 data_file = 'GSE90743_E14R025_raw_counts.txt'
 genome_loc = '/workspaces/git/src/inputs/genome.fasta'
 annotation_loc = '/workspaces/git/src/inputs/annotation.csv'
 pfm_database_loc = '/workspaces/git/src/preprocessing/pfmdb.txt'
 CiiiDER_jar_loc = '/CiiiDER/CiiiDER_TFMs/CiiiDER.jar'
-CiiiDER_thresh = 0.1
+CiiiDER_thresh = 0.5
 
 # global jazz
 sensor_normal_dist = 10
@@ -178,7 +178,7 @@ def get_betas_for_timepoint(genes_position_vector, genes_velocity_vector, networ
     return beta_arr
 
 def main(prokode_dir, data_file, genome_loc, annotation_loc, pfm_database_loc, CiiiDER_jar_loc, CiiiDER_thresh, prebuilt=False, reset=True):
-    print("=====================================\nProkODE: GetBetas has begun. Running...\n=====================================\n\n")
+    print("=====================================\nProkODE: GetBetas has begun. Running...\n=====================================\n")
 
     # create network.json if not already built
     print('creating network.json...')

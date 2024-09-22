@@ -1,22 +1,22 @@
 ### UNDER DEVELOPMENT ###
 import numpy as np
 
-def transcription_rate(gene, protein_amnts):
+num_ribosomes = 10000
 
-    return None
-def translation_rate(gene, protein_amnts):
-    return None
-def decay_rate(molecule, gene_key, gene, molecule_amnts):
+def transcription_rate(gene, protein_amnts, gene_key, network_loc):
+# need to get the network json line for the gene
+
+def translation_rate(prot, protein_amnts):
+    # get length mrna
+    
+    prot_creation_rate = 
+    return prot_creation_rate    
+
+def decay_rate(molecule, gene, protein_amnts):
     if molecule == "mRNA":
-        gene_index = gene_key.find(gene)
-        gene_molecule_amnt = molecule_amnts[gene_index]
-        degrading_proteins = # screening for decaying protiens
-        for dp in degrading_proteins:
-            N_dp = protein_amnts[dp]
-            Kd_dp = 
-            # some function of ndp kddp and nmrna
 
-    elif molecule == "protein"
-
+    elif molecule == "protein":
+        
     else:
-        raise Exeption("cannot find decay rate of specified molecule")
+        print("error: cannot find decay rate of entered molecule")
+        raise

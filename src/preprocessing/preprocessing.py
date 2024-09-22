@@ -112,7 +112,7 @@ def create_promoterf(prokode_dir, genome_loc, annotation_loc):
         for i in annotation_df.index:
             gene = annotation_df.loc[i, 'geneid']
             start = int(annotation_df.loc[i, 'start'])
-            promo_seq = genome[start-150:start+50]
+            promo_seq = genome[start-150:start+50].replace('\n','')
             promoters_file.write(f'>{gene}\n{promo_seq}\n')
 
     return promoters_loc
