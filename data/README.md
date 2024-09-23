@@ -9,7 +9,9 @@ general gene expression dbs:
 ### time series
 - https://zenodo.org/records/8114649
   - ai training data; not sure the exact formating (article: https://www.nature.com/articles/s41467-024-46361-1#Sec2)
-- 
+
+model time series data for extraction algorithm:
+- https://www.ncbi.nlm.nih.gov/gds?term=(Escherichia%20coli)%20AND%20Bacillus%20subtilis%2C
 
 ### tf knockout
 
