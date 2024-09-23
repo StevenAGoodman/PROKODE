@@ -60,3 +60,10 @@ Outputs:
    - average standard deviation:
 
 2. `1.2`
+
+https://iubmb.onlinelibrary.wiley.com/doi/epdf/10.1080/15216540400022441
+https://en.wikipedia.org/wiki/Reaction_progress_kinetic_analysis
+https://www.ncbi.nlm.nih.gov/pmc/articles/PMC5452729/
+https://www.thoughtco.com/activation-energy-definition-ea-606348
+https://chem.libretexts.org/Bookshelves/Introductory_Chemistry/Introductory_Chemistry/15%3A_Chemical_Equilibrium/15.02%3A_The_Rate_of_a_Chemical_Reaction
+https://chem.libretexts.org/Bookshelves/Biological_Chemistry/Supplemental_Modules_(Biological_Chemistry)/Enzymes/Enzymatic_Kinetics/Michaelis-Menten_Kinetics
