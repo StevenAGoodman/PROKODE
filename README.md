@@ -60,3 +60,5 @@ Outputs:
    - average standard deviation:
 
 2. `1.2`
+
+https://www.sciencedirect.com/science/article/pii/S0006349505732999#section.0015
