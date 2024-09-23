@@ -31,7 +31,13 @@ from maths import *
 # constants
 elongation_rate = 60 # nt/s
 peptide_rate = 20 # aa/s
-Kd_ribo_mrna = 
+Kd_ribo_mrna = 0.1 # WHAT IS THE BINDING AFFINITY OF RIBO TO DALGARNO SEQ????
+len_taken_by_rnap = 30 # nt
+len_taken_by_ribo = 30 # aa
+
+def get_mRNA_decay_info():
+    #search for mrna degrading genes
+    return {"rpoD":0.8}
 
 def transcription_rate(gene, protein_amnts, gene_key, N_rnap, Kd_rnap, gene_info_dict, genome_len):
     genome_len = 4.5e6
@@ -46,7 +52,7 @@ def transcription_rate(gene, protein_amnts, gene_key, N_rnap, Kd_rnap, gene_info
 
     # calculate max transcription rate
     transcript_len = gene_info_dict["transcript length"]
-    max_txn_rate = 1 / (transcript_len / elongation_rate) # transcripts/s
+    max_txn_rate = 1 / (len_taken_by_rnap / elongation_rate) # transcripts/s
 
     # calculate basal rnap binding prob
     P_rnap_basal = N_rnap / (genome_len * (N_rnap + Kd_rnap))
@@ -56,41 +62,52 @@ def transcription_rate(gene, protein_amnts, gene_key, N_rnap, Kd_rnap, gene_info
 def translation_rate(gene, protein_amnts, N_ribo, gene_info_dict):
     # calculate max translation rate
     mRNA_len = gene_info_dict["mRNA length"]
-    max_translation_rate = 1 / (mRNA_len * peptide_rate)
+    max_translation_rate = 1 / (len_taken_by_ribo / peptide_rate)
 
     # calculate ribo binding prob
     P_ribo_bound = N_ribo / (N_ribo + Kd_ribo_mrna)
 
     return P_ribo_bound * max_translation_rate
 
-def decay_rate(gene, protein_amnts, decay_dict, gene_key):
+def RNA_decay_rate(prev_total_mRNA_amnt, protein_amnts, decay_dict, gene_key):
     # calculation of natural decay component
-
+    natural_mRNA_decay_rate = 0
 
     # influence of degrading proteins
     # decay_dict contains protein geneids and kds
+    rate_of_mRNA_cleavage = 0
     for degrad_prot, kd in decay_dict.items():
         N_dp = protein_amnts[gene_key.index(degrad_prot)]
+        K_1 = kd
+        # K_1 is the reaction rate from [Enzyme] + [mRNA] -> [Enzyme-mRNA] (ie, K_1[Enzyme][mRNA] = [Enzyme-mRNA] create / time ) ... k_1 is in 1 / (mols * time)
+        rate_of_mRNA_cleavage += K_1 * prev_total_mRNA_amnt * N_dp / (1 + K_1 * prev_total_mRNA_amnt)
         # what is the relationship of multiple degrading proteins? it should be additive, right?
         # how can you identify a protien as degrading?
         # what is the relationship of degrading prots component and decay (ie half life) component
 
-def update_amnts(gene_key:list, prev_mRNA_amnts:list, prev_protein_amnts:list, N_rnap, N_ribo, network_dict, dt:float):
+    return rate_of_mRNA_cleavage + natural_mRNA_decay_rate
+
+def protein_decay_rate(gene, protein_amnts, decay_dict, gene_key):
+    return 0.01
+
+def update_amnts(gene_key:list, prev_mRNA_amnts:list, prev_protein_amnts:list, N_rnap, N_ribo, mRNA_decay_dict, network_dict, dt:float):
     mRNA_amnts = []
     protein_amnts = []
 
+    mRNA_decay_rate = RNA_decay_rate(sum(prev_mRNA_amnts), prev_protein_amnts, mRNA_decay_dict, gene_key)
+
     for n in range(len(gene_key)):
         gene = gene_key[n]
+        gene_info_dict = network_dict[gene]
 
         # mRNA calculation
-        mRNA_creation_rate = transcription_rate(gene, prev_protein_amnts)
-        mRNA_decay_rate = decay_rate("mRNA", gene, prev_protein_amnts)
-        total_mRNA_rate = mRNA_creation_rate - mRNA_decay_rate * prev_mRNA_amnts[n]
+        mRNA_creation_rate = transcription_rate(gene, prev_protein_amnts, gene_key, N_rnap, 0.1, gene_info_dict, genome_len=0)
+        total_mRNA_rate = mRNA_creation_rate - mRNA_decay_rate
         mRNA_amnt = prev_mRNA_amnts[n] + total_mRNA_rate * dt
 
         # protein calculation
         prot_creation_rate = translation_rate(gene, prev_protein_amnts)
-        prot_decay_rate = decay_rate("protein", gene, prev_protein_amnts)
+        prot_decay_rate = protein_decay_rate("protein", gene, prev_protein_amnts)
         total_prot_rate = prot_creation_rate - prot_decay_rate * prev_protein_amnts[n]
         protein_amnt = prev_protein_amnts[n] + total_prot_rate * dt
 
@@ -98,11 +115,10 @@ def update_amnts(gene_key:list, prev_mRNA_amnts:list, prev_protein_amnts:list, N
         protein_amnts.append(protein_amnt)
 
     # update rnap and ribosome populations
-    rate_rnap_decay = decay_rate("polymerase",)
 
     return mRNA_amnts, protein_amnts, N_rnap, N_ribo
 
-def get_plotting_data(gene_key, init_mRNA_amnts, init_protein_amnts, max_time, dt):
+def get_plotting_data(network_dict, gene_key, init_mRNA_amnts, init_protein_amnts, max_time, dt):
     x_coords = [0]
     y_coords = [init_protein_amnts]
 
@@ -113,23 +129,38 @@ def get_plotting_data(gene_key, init_mRNA_amnts, init_protein_amnts, max_time, d
     N_rnap = 10000
     N_ribo = 15000
 
-    for i in math.floor(max_time / dt):
+    mRNA_decay_dict = get_mRNA_decay_info()
+
+    for i in range(math.floor(max_time / dt)):
         time += dt
         x_coords.append(time)
         
-        mRNA_amnts, protein_amnts, N_rnap, N_ribo = update_amnts(gene_key, mRNA_amnts, protein_amnts, N_rnap, N_ribo, Kd_rnap, dt)
+        mRNA_amnts, protein_amnts, N_rnap, N_ribo = update_amnts(gene_key, mRNA_amnts, protein_amnts, N_rnap, N_ribo, mRNA_decay_dict, network_dict, dt)
 
         y_coords.append(protein_amnts)
 
     return x_coords, y_coords
 
-def plot_system(gene_key, init_mRNA_amnts, init_protein_amnts, dt, max_time):
-    x_coords, y_coords_tuple = get_plotting_data(gene_key, init_mRNA_amnts, init_protein_amnts, max_time, dt)
+def plot_system(network_loc,  dt, max_time):
+    # read inputs files
+    network_dict:dict = json.load(open(network_loc, 'r'))
+    gene_key = list(network_dict.keys())
 
-    for i in range(10):
-        plt.plot(t,s[:,i],random.choice(['r-','g-','b-']), linewidth=2.0)
+    # default to no initial mRNA
+    # try: read file except:
+    init_mRNA_amnts = [0] * len(gene_key)
+
+    # read input init protein file
+    init_protein_amnts = [np.random.randint(0,1000) for i in range(len(gene_key))]
+
+    x_coords, y_coords_tuple = get_plotting_data(network_dict, gene_key, init_mRNA_amnts, init_protein_amnts, max_time, dt)
+
+    for i in range(2):
+        plt.plot(x_coords,[gene_exps[i] for gene_exps in y_coords_tuple], random.choice(['r-','g-','b-']), linewidth=2.0)
     # plt.plot(t,s[:,2], 'g-',linewidth=2.0)
     plt.xlabel("t")
     plt.ylabel("S[N,C]")
     plt.legend(["N","C",'d'])
     plt.show()
+
+plot_system('C:/Users/cryst/LOFScreening/archive/PROKODE/src/network.json',1,10)

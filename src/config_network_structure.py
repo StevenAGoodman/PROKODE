@@ -39,7 +39,7 @@ def create_network_json(prokode_dir, tfbs_loc, annotation_df, operons_df):
 
         for gene in operon_gene_arr:
             # length of individual gene mrna
-            mRNA_len = annotation_df[annotation_df['geneid']==gene, 'end'] - annotation_df[annotation_df['geneid']==gene, 'start'] 
+            mRNA_len = int(annotation_df.loc[annotation_df['geneid']==gene, 'end'].values()) - int(annotation_df.loc[annotation_df['geneid']==gene, 'start'].values())
 
             # within each gene's brackets:
             try:
