@@ -25,15 +25,11 @@ def config_tfmotifs(prokode_dir, pfm_database_loc, annotation_loc):
 
     return out_loc
 
-def score_to_kd(score):
-    delta_G = score
-    return np.exp(delta_G / (1.98722 * temperature))
-
 def get_tfbs_rowarr(line, add_betas):
     # line headers: ['tg','_','tf','tf_matrixid','start','end','strand','prescore','score','seq']
     tfbs_row = [line[2], line[0]]
-    kd = score_to_kd(float(line[8]))
-    tfbs_row.append(kd)
+    score = float(line[8])
+    tfbs_row.append(score)
 
     # add betas if desired
     if add_betas:
@@ -67,9 +63,9 @@ DEFICIT = {deficit_val}"""
     tfbs_loc = prokode_dir + '/src/tfbs.csv'
     with open(tfbs_loc, 'a') as tfbs_file:
         if add_betas:
-            tfbs_file.write('tf,tg,kd,beta\n')
+            tfbs_file.write('tf,tg,score,beta\n')
         else:
-            tfbs_file.write('tf,tg,kd\n')
+            tfbs_file.write('tf,tg,score\n')
         writer_object = csv.writer(tfbs_file)
 
         with open(c_output_loc, "r") as csvfile:

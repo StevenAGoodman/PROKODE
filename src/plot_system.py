@@ -29,15 +29,32 @@ from maths import *
 # } 
 
 # constants
+temperature = 200 # kelvin
 elongation_rate = 60 # nt/s
 peptide_rate = 20 # aa/s
 Kd_ribo_mrna = 0.1 # WHAT IS THE BINDING AFFINITY OF RIBO TO DALGARNO SEQ????
 len_taken_by_rnap = 30 # nt
 len_taken_by_ribo = 30 # aa
 
-def get_mRNA_decay_info():
-    #search for mrna degrading genes
-    return {"rpoD":0.8}
+def score_to_K(score):
+    delta_G = score
+    return np.exp(delta_G / (1.98722 * temperature))
+
+def get_mRNA_decay_info(network_dict):
+    #search for mrna degrading genes: PNPase, Ribonuclease III, Ribonuclease Y, Ribonuclease G, Ribonuclease E, RNase J, RNase II, RNase R
+    degrading_prot_ref = {
+        "RNase E":{"names":["rne"], "score":0.1},
+        "RNase G":{"names":[pnp], "score":0.1},
+        "RNase Y":{"names":[rne; smbB; ams; hmp1; RNase E], "score":0.1},
+        "RNase III":{"names":["rnc"], "score":0.1},
+        "RNase J":{"names":[rne; smbB; ams; hmp1; RNase E], "score":0.1},
+        "RNase R":{"names":["rnr", "vacB", "yjeC"], "score":0.1},
+        "RNase II":{"names":["rnb"], "score":0.1},
+        "PNPase":{"names":["pnp"], "score":0.1},
+    }
+    try: 
+        network_dict[]
+    return 
 
 def transcription_rate(gene, protein_amnts, gene_key, N_rnap, Kd_rnap, gene_info_dict, genome_len):
     genome_len = 4.5e6
@@ -46,7 +63,7 @@ def transcription_rate(gene, protein_amnts, gene_key, N_rnap, Kd_rnap, gene_info
     beta_all = 0
     for tf, tf_info in gene_info_dict["regulators"].items():
         N_tf = protein_amnts[gene_key.index(tf)]
-        P = N_tf / (N_tf + tf_info["kd_tf"])
+        P = N_tf / (N_tf + score_to_K(tf_info["score"]))
         beta = tf_info["beta"]
         beta_all += beta * P
 
@@ -76,11 +93,10 @@ def RNA_decay_rate(prev_total_mRNA_amnt, protein_amnts, decay_dict, gene_key):
     # influence of degrading proteins
     # decay_dict contains protein geneids and kds
     rate_of_mRNA_cleavage = 0
-    for degrad_prot, kd in decay_dict.items():
+    for degrad_prot, K in decay_dict.items():
         N_dp = protein_amnts[gene_key.index(degrad_prot)]
-        K_1 = kd
         # K_1 is the reaction rate from [Enzyme] + [mRNA] -> [Enzyme-mRNA] (ie, K_1[Enzyme][mRNA] = [Enzyme-mRNA] create / time ) ... k_1 is in 1 / (mols * time)
-        rate_of_mRNA_cleavage += K_1 * prev_total_mRNA_amnt * N_dp / (1 + K_1 * prev_total_mRNA_amnt)
+        rate_of_mRNA_cleavage += K * prev_total_mRNA_amnt * N_dp / (1 + K * prev_total_mRNA_amnt)
         # what is the relationship of multiple degrading proteins? it should be additive, right?
         # how can you identify a protien as degrading?
         # what is the relationship of degrading prots component and decay (ie half life) component

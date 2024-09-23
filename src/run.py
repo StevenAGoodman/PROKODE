@@ -26,20 +26,12 @@ Nns = 4600000
 
 def create_network_json_main(prokode_dir, genome_loc, annotation_loc, operons_loc, pfm_database_loc, CiiiDER_jar_loc, CiiiDER_thresh, add_betas = False, reset=True):
     # reset file structure
-    os.remove('./results.json')
-    os.remove('./run.log')
-    os.remove('./src/tfbs.csv')
-    os.remove('./src/network.json')
-    os.remove('./src/__pycache__/config_network_structure.cpython-312.pyc')
-    os.rmdir('./src/__pycache__')
-    os.remove('./src/preprocessing/CiiiDER_results.bsl')
-    os.remove('./src/preprocessing/CiiiDER_results.tsv')
-    os.remove('./src/preprocessing/config.ini')
-    os.remove('./src/preprocessing/motif_matrices.ml')
-    os.remove('./src/preprocessing/motif_matrices.txt')
-    os.remove('./src/preprocessing/promoters.fa')
-    os.remove('./src/preprocessing/__pycache__/preprocessing.cpython-312.pyc')
-    os.rmdir('./src/preprocessing/__pycache__')
+    reset_files = ['./results.json','./run.log','./src/tfbs.csv','./src/network.json','./src/__pycache__/config_network_structure.cpython-312.pyc','./src/preprocessing/CiiiDER_results.bsl','./src/preprocessing/CiiiDER_results.tsv','./src/preprocessing/config.ini','./src/preprocessing/motif_matrices.ml','./src/preprocessing/motif_matrices.txt','./src/preprocessing/promoters.fa','./src/preprocessing/__pycache__/preprocessing.cpython-312.pyc']
+    for file in reset_files:
+        try:
+            os.remove(file)
+        except:
+            continue
 
     # create tfbs.csv
     print('\n\tpreprocessing inputs...')
