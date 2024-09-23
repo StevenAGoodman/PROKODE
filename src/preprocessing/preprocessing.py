@@ -26,7 +26,7 @@ def config_tfmotifs(prokode_dir, pfm_database_loc, annotation_loc):
     return out_loc
 
 def score_to_kd(score):
-    delta_G = 2
+    delta_G = score
     return np.exp(delta_G / (1.98722 * temperature))
 
 def get_tfbs_rowarr(line, add_betas):
@@ -41,7 +41,6 @@ def get_tfbs_rowarr(line, add_betas):
         tfbs_row.append(beta)
     
     return tfbs_row
-
 
 def create_tfbs_through_CiiiDER(prokode_dir, jar_loc, promoters_loc, matrices_loc, deficit_val, add_betas):
     # CiiiDER (https://ciiider.erc.monash.edu/) is a software that searches the promoter DNA regions of each gene with the binding motifs of each transcription factor to determine their binding sites. 
@@ -89,8 +88,8 @@ DEFICIT = {deficit_val}"""
                         line = row
                     
                     line_arr = line.split(',')
-                    a = line_arr[3]
-                    b = prev_fullline[3] if type(prev_fullline)==list else ''
+                    a = line_arr[2]
+                    b = prev_fullline[2] if type(prev_fullline)==list else ''
 
                     if a == b:
                         prev_fullline = line_arr
@@ -124,7 +123,7 @@ def create_promoterf(prokode_dir, genome_loc, operon_loc):
 def preprocessing_main(prokode_dir, genome_loc, annotation_loc, operons_loc, pfm_database_loc, CiiiDER_jar_loc, CiiiDER_thresh, add_betas=False):
     # create promoters.fa
     print('\t\t...creating promoter file')
-    promoters_loc = create_promoterf(prokode_dir, genome_loc, annotation_loc, operons_loc)
+    promoters_loc = create_promoterf(prokode_dir, genome_loc, operons_loc)
 
     # config motif matrix file for only tfs within genome
     print('\t\t...config tf motif file')
@@ -134,15 +133,3 @@ def preprocessing_main(prokode_dir, genome_loc, annotation_loc, operons_loc, pfm
     tfbs_loc = create_tfbs_through_CiiiDER(prokode_dir, CiiiDER_jar_loc, promoters_loc,motif_matrix_loc, CiiiDER_thresh, add_betas)
 
     return tfbs_loc
-
-reset = True
-prokode_dir = '/workspaces/git'
-data_file = 'GSE90743_E14R025_raw_counts.txt'
-genome_loc = '/workspaces/git/src/inputs/genome.fasta'
-annotation_loc = '/workspaces/git/src/inputs/annotation.csv'
-operons_loc = '/workspaces/git/src/inputs/operons.tsv'
-pfm_database_loc = '/workspaces/git/src/preprocessing/pfmdb.txt'
-CiiiDER_jar_loc = '/CiiiDER/CiiiDER_TFMs/CiiiDER.jar'
-CiiiDER_thresh = 0.5
-
-create_promoterf(prokode_dir, genome_loc, operons_loc)

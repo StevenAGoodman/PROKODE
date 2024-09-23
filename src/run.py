@@ -1,36 +1,53 @@
 import numpy as np
 import pandas as pd
-from src.preprocessing.preprocessing import preprocessing_main
-from src.config_network_structure import network_main
+from preprocessing.preprocessing import preprocessing_main
+from config_network_structure import network_main
 import os
 
-def create_network_json_main(prokode_dir, genome_loc, annotation_loc, pfm_database_loc, CiiiDER_jar_loc, CiiiDER_thresh, add_betas = False, reset=True):
+# paramters
+reset = False
+prokode_dir = '/workspaces/git'
+data_file = 'GSE90743_E14R025_raw_counts.txt'
+genome_loc = '/workspaces/git/src/inputs/genome.fasta'
+annotation_loc = '/workspaces/git/src/inputs/annotation.tsv'
+operons_loc = '/workspaces/git/src/inputs/operons.tsv'
+pfm_database_loc = '/workspaces/git/src/preprocessing/pfmdb.txt'
+CiiiDER_jar_loc = '/CiiiDER/CiiiDER_TFMs/CiiiDER.jar'
+CiiiDER_thresh = 0.1
+
+# global jazz
+sensor_normal_dist = 10
+basal_rate = 3
+decay_rate = np.log(2)/300
+Np = 6000
+Kd_p = 0.1
+Nns = 4600000
+
+def create_network_json_main(prokode_dir, genome_loc, annotation_loc, operons_loc, pfm_database_loc, CiiiDER_jar_loc, CiiiDER_thresh, add_betas = False, reset=True):
     if reset:
         # reset file structure
         # os.remove('./results.json')
         # os.remove('./run.log')
-        os.remove('./src/decay_rates.csv')
         os.remove('./src/tfbs.csv')
-        os.remove('./src/network.json')
+        # os.remove('./src/network.json')
         os.remove('./src/__pycache__/config_network_structure.cpython-312.pyc')
-        os.remove('./src/__pycache__/run.cpython-312.pyc')
         os.rmdir('./src/__pycache__')
-        # os.remove('./src/preprocessing/CiiiDER_results.bsl')
-        # os.remove('./src/preprocessing/CiiiDER_results.csv')
-        # os.remove('./src/preprocessing/config.ini')
-        # os.remove('./src/preprocessing/motif_matrices.ml')
+        os.remove('./src/preprocessing/CiiiDER_results.bsl')
+        os.remove('./src/preprocessing/CiiiDER_results.csv')
+        os.remove('./src/preprocessing/config.ini')
+        os.remove('./src/preprocessing/motif_matrices.ml')
         os.remove('./src/preprocessing/motif_matrices.txt')
         os.remove('./src/preprocessing/promoters.fa')
         os.remove('./src/preprocessing/__pycache__/preprocessing.cpython-312.pyc')
         os.rmdir('./src/preprocessing/__pycache__')
 
-    # create tfbs.csv and decay_rates.csv
-    print('\tpreprocessing inputs...')
-    tfbs_loc, decay_rates_loc =  preprocessing_main(prokode_dir, genome_loc, annotation_loc, pfm_database_loc, CiiiDER_jar_loc, CiiiDER_thresh, add_betas) # '/workspaces/PROKODE-DOCKER/src/tfbs.csv', '/workspaces/PROKODE-DOCKER/src/decay_rates.csv'
-
+    # # create tfbs.csv
+    # print('\n\tpreprocessing inputs...')
+    # tfbs_loc =  preprocessing_main(prokode_dir, genome_loc, annotation_loc, operons_loc, pfm_database_loc, CiiiDER_jar_loc, CiiiDER_thresh, add_betas) # '/workspaces/PROKODE-DOCKER/src/tfbs.csv', '/workspaces/PROKODE-DOCKER/src/decay_rates.csv'
+    tfbs_loc = '/workspaces/git/src/tfbs.csv'
     # create network.json
     print('\tconfiguring network structure file...')
-    network_loc = network_main(prokode_dir, annotation_loc, tfbs_loc, decay_rates_loc)
+    network_loc = network_main(prokode_dir, annotation_loc, operons_loc, tfbs_loc)
 
     return network_loc
 
@@ -48,3 +65,5 @@ def create_interface_files(network_loc):
     # plot_system(params, s0, gene_arr)
 
     return None
+
+create_network_json_main(prokode_dir, genome_loc, annotation_loc, operons_loc, pfm_database_loc, CiiiDER_jar_loc, CiiiDER_thresh, False, reset)

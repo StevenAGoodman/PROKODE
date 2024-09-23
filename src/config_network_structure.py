@@ -25,75 +25,63 @@ import pandas as pd
 #     ...
 # } 
 
-# def create_network_json(prokode_dir, gene_arr, decay_loc, tfbs_loc, annotation_df):
-#     # file df dependencies: 
-#     decay_df = pd.read_csv(decay_loc) # names=['gene', 'decay_rate']
-#     tfbs_df = pd.read_csv(tfbs_loc).reset_index() # names=[,'tf','tg','kd', 'beta]
-
-#     # json start brackets
-#     output = {}
-
-#     # loop over every gene
-#     for tg in gene_arr:
-#         # query decay rates file
-#         tgdecay = decay_df.loc[decay_df['gene']==tg, 'decay_rate']
-
-#         # within each gene's brackets:
-#         syn = annotation_df.loc[annotation_df['geneid']==tg,'synonyms'].values[0]
-#         arr = {"synonyms":ast.literal_eval(syn),"tg_decay":tgdecay.to_list()[0]}
-#         reg_arr = {}
-#         # within each gene's "regulators": array
-#         for _, tf_row in tfbs_df[tfbs_df['tg']==tg].iterrows():
-#             tf_row['tf'] = "polymerase" if tf_row['tf'] == "rpoD" else tf_row['tf']
-#             # beta = tf_row['beta']
-#             kdtf = tf_row['kd']
-#             reg_arr[tf_row['tf']] = {"beta":"nan","kd_tf":kdtf}
-#         arr["regulators"] = reg_arr
-        
-#         output[tg] = arr
-
-#     # write to network.json
-#     print('\t\twriting to network.json')
-#     network_loc = prokode_dir + '/src/network.json'
-#     json.dump(output, open(network_loc, 'w'), indent=5)
-
-#     return network_loc
-
-def create_network_json(prokode_dir, gene_arr, decay_loc, tfbs_loc, annotation_df):
-    # file df dependencies: 
-    decay_df = pd.read_csv(decay_loc) # names=['gene', 'decay_rate']
-
+def create_network_json(prokode_dir, tfbs_loc, annotation_df, operons_df):
     # json start brackets
     output = {}
 
     # loop over every gene
-    for tg in gene_arr: 
-        # query decay rates file
-        tgdecay = decay_df.loc[decay_df['gene']==tg, 'decay_rate']
+    for i, _ in operons_df.iterrows():
+        operon_gene_arr:str = operons_df.loc[i, 'geneids']
+        operon_gene_arr:list = json.loads(operon_gene_arr)
 
-        # within each gene's brackets:
-        syn = annotation_df.loc[annotation_df['geneid']==tg,'synonyms'].values[0]
-        arr = {"synonyms":ast.literal_eval(syn),"tg_decay":tgdecay.to_list()[0]}
-        reg_arr = {}
-        arr["regulators"] = reg_arr
-        
-        output[tg] = arr
+        # length of multi-gene mrna from operon
+        transcript_len = int(operons_df.loc[i, 'end']) - int(operons_df.loc[i, 'start'])
+
+        for gene in operon_gene_arr:
+            # length of individual gene mrna
+            mRNA_len = annotation_df[annotation_df['geneid']==gene, 'end'] - annotation_df[annotation_df['geneid']==gene, 'start'] 
+
+            # within each gene's brackets:
+            try:
+                syn = annotation_df.loc[annotation_df['geneid']==gene,'synonyms'].tolist()[0]
+                arr = {"synonyms":ast.literal_eval(syn),"transcript length":transcript_len,"mRNA length":mRNA_len}
+                reg_arr = {}
+                arr["regulators"] = reg_arr
+                
+                output[gene] = arr
+            except:
+                None
     
     with open(tfbs_loc, 'r') as tfbs_file:
         for _, line in enumerate(tfbs_file):
+            # skip blank lines
             if re.search('.+\d', line) == None:
                 continue
+
             line = line.split(',')
-            tg = line[1]
+            operon = int(line[1])
+            operon_genes:str = operons_df.loc[operons_df['operonid']==operon, 'geneids'].tolist()[0]
+            operon_genes:list = json.loads(operon_genes)
+
             tf = line[0]
             kdtf = float(line[2].replace('\n',''))
             # beta = line[3]
-            output[tg]["regulators"][tf] = {"beta":"NaN","kd_tf":kdtf}
+            
+            try:
+                for tg in operon_genes:
+                    output[tg]["regulators"][tf] = {"beta":"NaN","kd_tf":kdtf}
+            except:
+                continue
 
     # write to network.json
     print('\t\twriting to network.json')
+    print(output)
     network_loc = prokode_dir + '/src/network.json'
-    json.dump(output, open(network_loc, 'w'), indent=5)
+    with open(network_loc, 'a') as network_file:
+        network_file.write('{\n')
+        for gene, gene_elmnt in output.items():
+            network_file.write(f'"{gene}"' + ':' + json.dumps(gene_elmnt) + ',\n')
+        network_file.write('}')
 
     return network_loc
 
@@ -138,16 +126,16 @@ def create_network_json(prokode_dir, gene_arr, decay_loc, tfbs_loc, annotation_d
 #     Kdp =
 #     return Np / (Nns * Kdp)
 
-def network_main(prokode_dir, annotation_loc, tfbs_loc, decay_rates_loc):
+def network_main(prokode_dir, annotation_loc, operons_loc, tfbs_loc):
     # configer basal / polymerase condition files
     # basal_loc =
 
     # create gene_arr needed for create_network_json()
     annotation_df = pd.read_csv(annotation_loc, delimiter='\t')
-    gene_arr = list(set(annotation_df['geneid'].to_list()))
+    operons_df = pd.read_csv(operons_loc, sep='\t')
 
     # create network.json
-    network_loc = create_network_json(prokode_dir, gene_arr, decay_rates_loc, tfbs_loc, annotation_df)
+    network_loc = create_network_json(prokode_dir, tfbs_loc, annotation_df, operons_df)
 
     return network_loc
 
