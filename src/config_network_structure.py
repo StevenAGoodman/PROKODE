@@ -28,6 +28,7 @@ import pandas as pd
 def create_network_json(prokode_dir, tfbs_loc, annotation_df, operons_df):
     # json start brackets
     output = {}
+    gene_key = []
 
     # loop over every gene
     for i, _ in operons_df.iterrows():
@@ -49,6 +50,7 @@ def create_network_json(prokode_dir, tfbs_loc, annotation_df, operons_df):
                 arr["regulators"] = reg_arr
                 
                 output[gene] = arr
+                gene_key.append(gene)
             except:
                 print('failed: ', gene)
                 None
@@ -86,7 +88,7 @@ def create_network_json(prokode_dir, tfbs_loc, annotation_df, operons_df):
                 network_file.write(f'"{gene}"' + ':' + json.dumps(gene_elmnt) +',\n')
         network_file.write('}')
 
-    return network_loc
+    return network_loc, gene_key
 
 # def create_network_json(prokode_dir, gene_arr, decay_loc, tfbs_loc, annotation_df):
 #     # read file dependencies: 
@@ -138,8 +140,8 @@ def network_main(prokode_dir, annotation_loc, operons_loc, tfbs_loc):
     operons_df = pd.read_csv(operons_loc, sep='\t')
 
     # create network.json
-    network_loc = create_network_json(prokode_dir, tfbs_loc, annotation_df, operons_df)
+    network_loc, gene_key = create_network_json(prokode_dir, tfbs_loc, annotation_df, operons_df)
 
-    return network_loc
+    return network_loc, gene_key
 
 # net = network_main('/workspaces/PROKODE-DOCKER', '/workspaces/PROKODE-DOCKER/src/inputs/annotation.csv', '/workspaces/PROKODE-DOCKER/src/tfbs.csv', '/workspaces/PROKODE-DOCKER/src/decay_rates.csv')

@@ -2,18 +2,19 @@ import pandas as pd
 import numpy as np
 import json
 import statistics
-from src.run import create_network_json_main
+from matplotlib import pyplot as plt
+# from src.run import create_network_json_main
 from src.plot_system import *
 import cvxpy 
 
 reset = True
-prokode_dir = '/workspaces/git'
+prokode_dir = 'C:/Users/cryst/LOFScreening/archive/PROKODE'
 data_file = 'GSE90743_E14R025_raw_counts.txt'
 genome_loc = prokode_dir + '/src/inputs/genome.fasta'
 annotation_loc = prokode_dir + '/src/inputs/annotation.tsv'
 operons_loc = prokode_dir + '/src/inputs/operons.tsv'
 pfm_database_loc = prokode_dir + '/src/preprocessing/pfmdb.txt'
-CiiiDER_jar_loc = '/CiiiDER/CiiiDER_TFMs/CiiiDER.jar'
+CiiiDER_jar_loc = './CiiiDER_TFMs/CiiiDER.jar'
 CiiiDER_thresh = 0.3
 
 # global jazz
@@ -47,7 +48,7 @@ def find_key_nonrecursive(adict:dict, key):
         if key in d:
             return v
     
-def compare(beta_collection, tf_key):
+def compare(t, beta_collection, tf_key):
     compare_json = []
     count = 0
     running_mean_std_dev = 0
@@ -67,6 +68,14 @@ def compare(beta_collection, tf_key):
     compare_json.append({"tf":"all","mean standard deviation":running_mean_std_dev,"mean log standard deviation":np.log(running_mean_std_dev)})
     
     json.dump(compare_json, open('results.json', 'w'), indent=3)
+
+    y = []
+    for i in range(len(beta_collection)):
+        std_dev = statistics.stdev(beta_collection[i])
+        y.append(std_dev)
+    
+    plt.plot(t, y, '-b')
+    plt.show()
 
 def update(P_predict, H, R, z_k, x_predict):
     # kalman gain
@@ -88,6 +97,7 @@ def kalman_filtering(data):
 
     # define t
     t = [5,10,25,45,75,120,210,330,1500,1560,1680]
+    t = [60 * time_min for time_min in t] # to seconds
 
     # init kalman inputs
     x = x_0 = np.array([[0],
@@ -132,7 +142,7 @@ def kalman_filtering(data):
     print('kalman complete...')
     return positions_matrix, velocities_matrix, gene_key, t
 
-def get_betas_for_timepoint(prev_protein_amnts, genes_position_vector, genes_velocity_vector, N_rnap, N_ribo, network_dict, mRNA_decay_dict, protein_decay_dict, gene_key, tf_key, dt):
+def get_betas_for_timepoint(prev_protein_amnts, genes_position_vector, genes_velocity_vector, N_rnap, N_ribo, network_loc, network_gene_key, mRNA_decay_dict, protein_decay_dict, gene_key, tf_key, dt):
     coefficient_matrix = []
     beta_all_matrix = []
 
@@ -142,8 +152,8 @@ def get_betas_for_timepoint(prev_protein_amnts, genes_position_vector, genes_vel
         gene = gene_key[R]
 
         # get coeffiecients
-        k = find_key_nonrecursive(network_dict, gene)
         try:
+            k = search_json(network_loc, gene, network_gene_key)
             tfs_info = [ tf for tf in k["regulators"].keys() ]
         except:
             print(gene, 'FAILURE!!!!!')
@@ -153,7 +163,7 @@ def get_betas_for_timepoint(prev_protein_amnts, genes_position_vector, genes_vel
         for tf in tfs_info:
             N_tf = genes_position_vector[gene_key.index(tf)]
             P = N_tf / (N_tf + score_to_K(k["regulators"][tf]["score"]))
-            coefficient_arr[tf_key.index(tf)] = float(P)
+            coefficient_arr[tf_key.index(tf)] = float(P) # ~multiplicative method
         
         # get mRNA decay
         mRNA_decay_rate = RNA_decay_rate(gene, genes_position_vector, genes_position_vector[R], mRNA_decay_dict, gene_key)
@@ -169,7 +179,7 @@ def get_betas_for_timepoint(prev_protein_amnts, genes_position_vector, genes_vel
         P_rnap_basal = N_rnap / (genome_len * (N_rnap + Kd_rnap))
 
         beta_all = R_transcription / (P_rnap_basal * max_txn_rate)
-        beta_all_matrix.append(beta_all)
+        beta_all_matrix.append(np.log(beta_all)) # ~multiplicative method
 
         # get protein rates
         if k != []:
@@ -215,14 +225,20 @@ def main(prokode_dir, data_file, genome_loc, annotation_loc, operons_loc, pfm_da
     if prebuilt:
         network_loc = prokode_dir + '/src/network.json'
     else:
-        network_loc = create_network_json_main(prokode_dir, genome_loc, annotation_loc, operons_loc, pfm_database_loc, CiiiDER_jar_loc, CiiiDER_thresh, False, reset)# 
-
-    network_dict: dict = json.load(open(network_loc, 'r'))
-    
-
-    # define arbitrary order of tfs
-    tf_key = [ tf for val in network_dict.values() for tf in val["regulators"].keys() ]
+        None
+        # network_loc = create_network_json_main(prokode_dir, genome_loc, annotation_loc, operons_loc, pfm_database_loc, CiiiDER_jar_loc, CiiiDER_thresh, False, reset)# 
+        # define arbitrary order of tfs
+    tf_key = [ tf for val in json.load(open(network_loc, 'r')).values() for tf in val["regulators"].keys() ]
     tf_key = list(set(tf_key)) # filter repeats
+
+    network_gene_key = []
+    with open(network_loc, 'r') as network_f:
+        for _, line in enumerate(network_f):
+            if line == '{\n' or line == '}':
+                continue
+            else:
+                gene = line[line.find('"')+1:line.find('":{')]
+                network_gene_key.append(gene)
 
     # kalman filtering
     print('kalman filtering...')
@@ -244,7 +260,7 @@ def main(prokode_dir, data_file, genome_loc, annotation_loc, operons_loc, pfm_da
         time = t[time_index]
 
         print('\t...getting betas for timepoint')
-        beta_arr, protein_amnts = get_betas_for_timepoint(protein_amnts, positions_matrix[:, time_index], velocities_matrix[:, time_index], N_rnap, N_ribo, network_dict, mRNA_decay_dict, protein_decay_dict, gene_key, tf_key, dt)
+        beta_arr, protein_amnts = get_betas_for_timepoint(protein_amnts, positions_matrix[:, time_index], velocities_matrix[:, time_index], N_rnap, N_ribo, network_loc, network_gene_key, mRNA_decay_dict, protein_decay_dict, gene_key, tf_key, dt)
         beta_collection.append(beta_arr)
 
     print('\t...merging timepoints')
@@ -252,6 +268,6 @@ def main(prokode_dir, data_file, genome_loc, annotation_loc, operons_loc, pfm_da
 
     print('analyzing and writing results file...')
 
-    compare(beta_collection, tf_key)
+    compare(t, beta_collection, tf_key)
 
-main(prokode_dir, data_file, genome_loc, annotation_loc, operons_loc, pfm_database_loc, CiiiDER_jar_loc, CiiiDER_thresh, False, reset)
+main(prokode_dir, data_file, genome_loc, annotation_loc, operons_loc, pfm_database_loc, CiiiDER_jar_loc, CiiiDER_thresh, True, reset)

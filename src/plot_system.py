@@ -1,5 +1,6 @@
 ### UNDER DEVELOPMENT ###
 import json
+import linecache
 import random
 import numpy as np
 import matplotlib.pyplot as plt
@@ -16,8 +17,15 @@ Kd_ribo_mrna = 0.1 # WHAT IS THE BINDING AFFINITY OF RIBO TO DALGARNO SEQ????
 len_taken_by_rnap = 30 # nt
 len_taken_by_ribo = 30 # aa
 
+def search_json(json_loc, key, gene_key):
+    index = gene_key.index(key)
+    line = linecache.getline(json_loc, index)
+    line = line[line.find('{'):-2]
+    gene_dict = json.loads(line)
+    return gene_dict
+
 def score_to_K(score):
-    delta_G = score
+    delta_G = -1 * score
     return np.exp(delta_G / (1.98722 * temperature))
 
 def get_decay_dicts():
@@ -86,13 +94,14 @@ def protein_decay_rate(gene, protein_amnts, decay_dict, gene_key):
     # return 1 / total_half_life
     return 0
 
-def update_amnts(gene_key:list, prev_mRNA_amnts:list, prev_protein_amnts:list, N_rnap, N_ribo, mRNA_decay_dict, protein_decay_dict, network_dict, dt:float):
+def update_amnts(gene_key:list, prev_mRNA_amnts:list, prev_protein_amnts:list, N_rnap, N_ribo, mRNA_decay_dict, protein_decay_dict, network_loc, dt:float):
     mRNA_amnts = []
     protein_amnts = []
 
     for n in range(len(gene_key)):
         gene = gene_key[n]
-        gene_info_dict = network_dict[gene]
+        gene_info_dict = linecache.getline(network_loc, n)
+        gene_info_dict = json.loads(gene_info_dict)
 
         # mRNA calculation
         mRNA_creation_rate = transcription_rate(gene, prev_protein_amnts, gene_key, N_rnap, 0.1, gene_info_dict, genome_len=0)
@@ -113,7 +122,7 @@ def update_amnts(gene_key:list, prev_mRNA_amnts:list, prev_protein_amnts:list, N
 
     return mRNA_amnts, protein_amnts, N_rnap, N_ribo
 
-def get_plotting_data(init_mRNA_amnts, init_protein_amnts, network_dict, gene_key, mRNA_decay_dict, protein_decay_dict, max_time, dt):
+def get_plotting_data(init_mRNA_amnts, init_protein_amnts, network_loc, gene_key, mRNA_decay_dict, protein_decay_dict, max_time, dt):
     x_coords = [0]
     y_coords = [init_protein_amnts]
 
@@ -128,18 +137,14 @@ def get_plotting_data(init_mRNA_amnts, init_protein_amnts, network_dict, gene_ke
         time += dt
         x_coords.append(time)
         
-        mRNA_amnts, protein_amnts, N_rnap, N_ribo = update_amnts(gene_key, mRNA_amnts, protein_amnts, N_rnap, N_ribo, mRNA_decay_dict, protein_decay_dict, network_dict, dt)
+        mRNA_amnts, protein_amnts, N_rnap, N_ribo = update_amnts(gene_key, mRNA_amnts, protein_amnts, N_rnap, N_ribo, mRNA_decay_dict, protein_decay_dict, network_loc, dt)
 
         y_coords.append(protein_amnts)
 
     return x_coords, y_coords
 
-def plot_system(prokode_dir, network_loc, mRNA_decay_loc, protein_decay_loc, dt, max_time):
+def plot_system(prokode_dir, network_loc, mRNA_decay_loc, protein_decay_loc, gene_key, dt, max_time):
     print('== plotting begun ==')
-    # read inputs files
-    network_dict = json.load(open(network_loc, 'r'))
-    gene_key = list(network_dict.keys())
-
     # mRNA_decay_loc, protein_decay_loc = decay_main(prokode_dir, gene_key)
 
 
@@ -153,7 +158,7 @@ def plot_system(prokode_dir, network_loc, mRNA_decay_loc, protein_decay_loc, dt,
     # config decay_dicts\
     mRNA_decay_dict, protein_decay_dict = get_decay_dicts()
 
-    x_coords, y_coords_tuple = get_plotting_data(init_mRNA_amnts, init_protein_amnts, network_dict, gene_key, mRNA_decay_dict, protein_decay_dict, max_time, dt)
+    x_coords, y_coords_tuple = get_plotting_data(init_mRNA_amnts, init_protein_amnts, network_loc, gene_key, mRNA_decay_dict, protein_decay_dict, max_time, dt)
 
     for i in range(10):
         plt.plot(x_coords,[gene_exps[i] for gene_exps in y_coords_tuple], random.choice(['r-','g-','b-']), linewidth=2.0)
